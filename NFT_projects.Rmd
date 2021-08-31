@@ -1,0 +1,114 @@
+---
+title: "NFT Projects"
+author: "Vish"
+date: "30/08/2021"
+output: html_document
+---
+
+```{r}
+library(rtweet)
+library(tidytext)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(writexl)
+```
+
+
+```{r include=FALSE}
+## load rtweet
+vish_api <- read.csv('vish_api.csv')
+#============================================================================
+# Authentication via Web Browser, tutorial here
+# https://rtweet.info/articles/auth.html
+## store api keys (these are fake example values; replace with your own keys)
+api_key <- vish_api$api_key
+api_secret_key <- vish_api$api_secret
+access_token <- vish_api$access_token 
+access_secret <- vish_api$access_token_secret
+
+token <- create_token(
+  app = "mamultron",
+  consumer_key = api_key,
+  consumer_secret = api_secret_key,
+  access_token = access_token,
+  access_secret = access_secret)
+```
+
+
+
+```{r}
+nft.30.08_import <- read.csv("nft1.csv")
+```
+
+```{r}
+nft.30.08 <- nft.30.08 %>%
+  unnest_tokens(word,text,token = "regex",to_lower = TRUE,pattern = "\\s+") 
+```
+
+```{r}
+nft.30.08 <- nft.30.08 %>%
+  filter(grepl("^@",word)) %>% 
+  separate(col = word,sep = c(1),into = c("a", "user"),remove = FALSE) %>% 
+  select(user)
+
+```
+
+
+
+```{r}
+users <- c(nft.30.08)
+flw <- vector("list", length(users[["user"]]))
+n <- 10000
+
+for (i in seq_along(flw)) {
+  flw[[i]] <- (get_followers(users[["user"]][i], n = n, retryonratelimit = TRUE))
+  Sys.sleep(60)
+}
+```
+
+
+```{r}
+nft_followers <- flw
+names(nft_followers) <- c(users[["user"]])
+
+```
+
+
+```{r}
+all <- bind_rows(nft_followers, .id = "nft.projects") %>% 
+  group_by(nft.projects) %>% 
+  summarise(followers = n()) %>% 
+  mutate(twitter=paste0("www.twitter.com/",nft.projects))
+
+```
+
+```{r}
+write_xlsx(all,"projects.xlsx")
+```
+
+
+
+
+```{r}
+list_df <- list(flw)
+
+map2_dfr(names(list_df), list_df, function(df_names, df_var) 
+  df_var %>% 
+    summarise(
+      name      = df_names,
+      row_count = n())
+  )
+```
+
+```{r}
+nft.30.08_price <- nft.30.08_import %>% 
+ filter(grepl("ETH",text))
+```
+
+
+
+
+
+
+
